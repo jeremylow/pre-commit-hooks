@@ -1,5 +1,5 @@
 - id: makefile_tabs
   name: Enforce tabs in Makefiles
   language: pygrep
-  files: Makefile
+  files: Makefile*
   entry: "^[ ].*$"
