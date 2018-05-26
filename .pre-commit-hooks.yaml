@@ -3,3 +3,10 @@
   language: pygrep
   files: Makefile*
   entry: "^[ ].*$"
+
+- id: check-inline-doc-spacing
+  name: All python doc string indents should be multiples of four
+  types: [python]
+  language: script
+  entry: call_check_inline_doc_spacing.sh
+  files: ''
