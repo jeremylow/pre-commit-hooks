@@ -5,24 +5,31 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import ast
+import os
 import re
 import sys
 
 FIND_PATTERN = re.compile(r'^([ ]{1,})(?:.*)', re.UNICODE)
 
+AST_TO_HUMAN = {
+    ast.Module: 'module',
+    ast.FunctionDef: 'function',
+    ast.ClassDef: 'class',
+}
+
 
 def check_module_indents(module):
     try:
-        if not isinstance(model.body[0], ast.Expr):
+        if not isinstance(module.body[0], ast.Expr):
             return (0, '')
 
-        expr = model.body[0]
+        expr = module.body[0]
         init_lineno, doc_string = expr.lineno, expr.value.s
 
         # for modules, lineno is the *end* of the doc string
         lineno = init_lineno - len(re.findall('\n', doc_string))
         return (lineno, doc_string)
-    except:
+    except Exception as e:
         return (0, '')
 
 
@@ -31,15 +38,20 @@ def check_doc_string(f, lineno, node, doc_string):
     retval = 0
     for line in doc_string.split('\n'):
         lineno += 1
-        print(lineno, line)
         white_space_strings = re.findall(pattern=FIND_PATTERN, string=line)
-        if not white_space_strings:
-            continue
+
+        if not white_space_strings: continue
+
+        if isinstance(node, ast.Module):
+            node.name = os.path.basename(f)
+
+        section = AST_TO_HUMAN.get(type(node), '')
+
         if 0 < len(white_space_strings[0]) < 4:
-            fails.append("{0}:{1} in {2}: spacing not a multiple of four.".format(f, lineno, node.name))
+            fails.append("{0}:{1} in {2} {3}: spacing not a multiple of four.".format(f, lineno, section, node.name))
             retval = 1
         elif len(white_space_strings[0]) % 4 != 0:
-            fails.append("{0}:{1} in {2}: spacing not a multiple of four.".format(f, lineno, node.name))
+            fails.append("{0}:{1} in {2} {3}: spacing not a multiple of four.".format(f, lineno, section, node.name))
             retval = 1
     return (retval, fails)
 
@@ -55,16 +67,10 @@ def main(files):
         tree = ast.parse(source)
         for node in ast.walk(tree):
 
-            # print(node)
-            # print(failures)
-            # print("#"*30)
-
             if isinstance(node, ast.Module):
-                # import ipdb; ipdb.set_trace()
                 lineno, doc_string = check_module_indents(node)
                 retval, fails = check_doc_string(f, lineno, node, doc_string)
                 if fails: failures += fails
-                # print(retval, failures)
             else:
                 try:
                     doc_string = ast.get_docstring(node)
@@ -79,7 +85,6 @@ def main(files):
                     continue
 
     if failures:
-        print(failures, type(failures))
         [print(failure) for failure in failures]
         return 1
     else:
