@@ -9,49 +9,58 @@ import os
 import re
 import sys
 
-FIND_PATTERN = re.compile(r'^([ ]{1,})(?:.*)', re.UNICODE)
+FIND_PATTERN = re.compile(r"^([ ]{1,})(?:.*)", re.UNICODE)
 
 AST_TO_HUMAN = {
-    ast.Module: 'module',
-    ast.FunctionDef: 'function',
-    ast.ClassDef: 'class',
+    ast.Module: "module",
+    ast.FunctionDef: "function",
+    ast.ClassDef: "class",
 }
 
 
 def check_module_indents(module):
     try:
         if not isinstance(module.body[0], ast.Expr):
-            return (0, '')
+            return (0, "")
 
         expr = module.body[0]
         init_lineno, doc_string = expr.lineno, expr.value.s
 
         # for modules, lineno is the *end* of the doc string
-        lineno = init_lineno - len(re.findall('\n', doc_string))
+        lineno = init_lineno - len(re.findall("\n", doc_string))
         return (lineno, doc_string)
     except Exception as e:
-        return (0, '')
+        return (0, "")
 
 
 def check_doc_string(f, lineno, node, doc_string):
     fails = []
     retval = 0
-    for line in doc_string.split('\n'):
+    for line in doc_string.split("\n"):
         lineno += 1
         white_space_strings = re.findall(pattern=FIND_PATTERN, string=line)
 
-        if not white_space_strings: continue
+        if not white_space_strings:
+            continue
 
         if isinstance(node, ast.Module):
             node.name = os.path.basename(f)
 
-        section = AST_TO_HUMAN.get(type(node), '')
+        section = AST_TO_HUMAN.get(type(node), "")
 
         if 0 < len(white_space_strings[0]) < 4:
-            fails.append("{0}:{1} in {2} {3}: spacing not a multiple of four.".format(f, lineno, section, node.name))
+            fails.append(
+                "{0}:{1} in {2} {3}: spacing not a multiple of four.".format(
+                    f, lineno, section, node.name
+                )
+            )
             retval = 1
         elif len(white_space_strings[0]) % 4 != 0:
-            fails.append("{0}:{1} in {2} {3}: spacing not a multiple of four.".format(f, lineno, section, node.name))
+            fails.append(
+                "{0}:{1} in {2} {3}: spacing not a multiple of four.".format(
+                    f, lineno, section, node.name
+                )
+            )
             retval = 1
     return (retval, fails)
 
@@ -70,7 +79,8 @@ def main(files):
             if isinstance(node, ast.Module):
                 lineno, doc_string = check_module_indents(node)
                 retval, fails = check_doc_string(f, lineno, node, doc_string)
-                if fails: failures += fails
+                if fails:
+                    failures += fails
             else:
                 try:
                     doc_string = ast.get_docstring(node)
@@ -79,7 +89,8 @@ def main(files):
 
                 if doc_string:
                     retval, fails = check_doc_string(f, node.lineno, node, doc_string)
-                    if fails: failures += fails
+                    if fails:
+                        failures += fails
 
                 else:
                     continue
